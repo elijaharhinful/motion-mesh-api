@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -16,6 +17,7 @@ import { User } from '../users/entities/user.entity';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
+import { Profile as GoogleProfile } from 'passport-google-oauth20';
 
 const BCRYPT_ROUNDS = 12;
 const REDIS_REFRESH_PREFIX = 'refresh:';
@@ -122,6 +124,50 @@ export class AuthService {
 
   async logout(opaqueToken: string): Promise<void> {
     await this.redis.del(`${REDIS_REFRESH_PREFIX}${opaqueToken}`);
+  }
+
+  async googleOAuth(
+    profile: GoogleProfile,
+  ): Promise<{ user: User; accessToken: string; refreshToken: string }> {
+    const googleId = profile.id;
+    const email = profile.emails?.[0]?.value;
+    const firstName = profile.name?.givenName ?? 'Google';
+    const lastName = profile.name?.familyName ?? 'User';
+    const avatarUrl = profile.photos?.[0]?.value ?? null;
+
+    if (!email) {
+      throw new BadRequestException(ERROR_MESSAGES.AUTH_GOOGLE_NO_EMAIL);
+    }
+
+    // 1. Try to find an existing user by googleId
+    let user = await this.usersRepository.findOne({ where: { googleId } });
+
+    if (!user) {
+      // 2. Fall back to email lookup — may be a pre-existing password account
+      user = await this.usersRepository.findOne({ where: { email } });
+
+      if (user) {
+        // Link the Google identity to the existing account
+        user.googleId = googleId;
+        if (!user.avatarUrl && avatarUrl) user.avatarUrl = avatarUrl;
+        user.isEmailVerified = true;
+        await this.usersRepository.save(user);
+      } else {
+        // 3. Brand-new user — create from Google profile
+        user = this.usersRepository.create({
+          email,
+          firstName,
+          lastName,
+          googleId,
+          avatarUrl,
+          passwordHash: null,
+          isEmailVerified: true,
+        });
+        await this.usersRepository.save(user);
+      }
+    }
+
+    return { user, ...(await this.issueTokens(user)) };
   }
 
   // ─── Helpers ────────────────────────────────────────────────────────────────

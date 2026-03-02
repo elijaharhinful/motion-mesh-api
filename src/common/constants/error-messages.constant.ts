@@ -5,6 +5,7 @@ export const ERROR_MESSAGES = {
   AUTH_EMAIL_NOT_VERIFIED: 'Please verify your email before logging in.',
   AUTH_INVALID_REFRESH_TOKEN: 'Refresh token is invalid or expired.',
   AUTH_UNAUTHORIZED: 'You must be logged in to perform this action.',
+  AUTH_GOOGLE_NO_EMAIL: 'Google account did not provide an email address.',
 
   // ─── Users ──────────────────────────────────────────────────────────────────
   USER_NOT_FOUND: 'User not found.',

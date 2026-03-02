@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
@@ -22,7 +23,10 @@ import {
   ApiLogin,
   ApiRefresh,
   ApiLogout,
+  ApiGoogleAuth,
+  ApiGoogleCallback,
 } from './swagger/auth.swagger';
+import { AuthGuard } from '@nestjs/passport';
 import {
   SUCCESS_MESSAGES,
   fetchSuccess,
@@ -110,5 +114,36 @@ export class AuthController {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       path: '/api/v1/auth',
     });
+  }
+
+  // ─── Google OAuth ─────────────────────────────────────────────────────────────
+
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  @ApiGoogleAuth()
+  googleAuth(): void {
+    // Passport redirects to Google — no body needed
+  }
+
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  @ApiGoogleCallback()
+  async googleCallback(
+    @Req()
+    req: Request & {
+      user: { user: User; accessToken: string; refreshToken: string };
+    },
+    @Res() res: Response,
+  ): Promise<void> {
+    const { user: _user, accessToken, refreshToken } = req.user;
+    this.setRefreshCookie(
+      res as unknown as import('express').Response,
+      refreshToken,
+    );
+
+    const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3001';
+    (res as unknown as import('express').Response).redirect(
+      `${frontendUrl}/auth/callback?accessToken=${encodeURIComponent(accessToken)}`,
+    );
   }
 }

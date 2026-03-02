@@ -4,6 +4,7 @@ export const SUCCESS_MESSAGES = {
     'Account created successfully. Please check your email to verify your account.',
   LOGIN_SUCCESS: 'Logged in successfully.',
   LOGOUT_SUCCESS: 'Logged out successfully.',
+  GOOGLE_LOGIN_SUCCESS: 'Signed in with Google successfully.',
   EMAIL_VERIFIED: 'Your email address has been verified. You can now log in.',
   PASSWORD_RESET_SENT:
     'Password reset instructions have been sent to your email.',

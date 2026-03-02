@@ -1,0 +1,48 @@
+# ─── Dependencies ─────────────────────────────────────────────────────────────
+node_modules/
+
+# ─── Build output ─────────────────────────────────────────────────────────────
+dist/
+build/
+
+# ─── Environment ──────────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ─── TypeORM ──────────────────────────────────────────────────────────────────
+# Keep migrations committed; ignore auto-generated snapshots
+*.js.map
+
+# ─── pnpm ─────────────────────────────────────────────────────────────────────
+# Commit pnpm-lock.yaml — do not ignore it
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ─── Test coverage ────────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+
+# ─── TypeScript incremental compilation ───────────────────────────────────────
+*.tsbuildinfo
+
+# ─── OS / Editor ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ─── Misc ─────────────────────────────────────────────────────────────────────
+keypair.json

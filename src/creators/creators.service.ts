@@ -34,12 +34,7 @@ export class CreatorsService {
       bio: dto.bio ?? null,
       socialLink: dto.socialLink ?? null,
     });
-    const saved = await this.creatorProfilesRepository.save(profile);
-
-    // Upgrade user role to CREATOR
-    await this.usersRepository.update(user.id, { role: UserRole.CREATOR });
-
-    return saved;
+    return this.creatorProfilesRepository.save(profile);
   }
 
   async getProfileById(creatorId: string): Promise<CreatorProfile> {
@@ -87,7 +82,10 @@ export class CreatorsService {
     });
   }
 
-  async assertCreatorOwnsProfile(userId: string, creatorId: string): Promise<void> {
+  async assertCreatorOwnsProfile(
+    userId: string,
+    creatorId: string,
+  ): Promise<void> {
     const profile = await this.creatorProfilesRepository.findOne({
       where: { id: creatorId, userId },
     });

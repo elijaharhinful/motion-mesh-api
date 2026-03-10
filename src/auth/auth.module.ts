@@ -7,7 +7,7 @@ import { User } from '../users/entities/user.entity';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { RolesGuard } from './guards/roles.guard';
+import { CreatorProfileGuard } from './guards/creator-profile.guard';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 
@@ -29,8 +29,14 @@ import { GoogleStrategy } from './strategies/google.strategy';
     JwtStrategy,
     GoogleStrategy,
     JwtAuthGuard,
-    RolesGuard,
+    CreatorProfileGuard,
   ],
-  exports: [AuthService, JwtAuthGuard, RolesGuard, JwtModule, PassportModule],
+  exports: [
+    AuthService,
+    JwtAuthGuard,
+    CreatorProfileGuard,
+    JwtModule,
+    PassportModule,
+  ],
 })
 export class AuthModule {}

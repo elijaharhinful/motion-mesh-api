@@ -23,7 +23,9 @@ export class WebhooksController {
     @Headers('stripe-signature') signature: string,
   ) {
     if (!req.rawBody) {
-      throw new BadRequestException('Raw body required for webhook signature verification');
+      throw new BadRequestException(
+        'Raw body required for webhook signature verification',
+      );
     }
     return this.webhooksService.handleStripeWebhook(req.rawBody, signature);
   }

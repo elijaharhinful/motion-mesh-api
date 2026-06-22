@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant';
 
@@ -23,21 +27,26 @@ export class KlingAiClient {
     referenceVideoUrl: string,
     faceImageUrl: string,
   ): Promise<string> {
-    const response = await fetch(`${this.baseUrl}/v1/videos/human-dance-generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiKey}`,
+    const response = await fetch(
+      `${this.baseUrl}/v1/videos/human-dance-generate`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          reference_video: referenceVideoUrl,
+          face_image: faceImageUrl,
+          output_type: 'mp4',
+        }),
       },
-      body: JSON.stringify({
-        reference_video: referenceVideoUrl,
-        face_image: faceImageUrl,
-        output_type: 'mp4',
-      }),
-    });
+    );
 
     if (!response.ok) {
-      this.logger.error(`Kling API error: ${response.status} ${response.statusText}`);
+      this.logger.error(
+        `Kling API error: ${response.status} ${response.statusText}`,
+      );
       throw new InternalServerErrorException(ERROR_MESSAGES.KLING_API_ERROR);
     }
 

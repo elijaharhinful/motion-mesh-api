@@ -7,13 +7,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import Redis from 'ioredis';
-import { Repository } from 'typeorm';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant';
 import { User } from '../users/entities/user.entity';
+import { UserActions } from '../users/actions/user.actions';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
@@ -28,15 +27,14 @@ export class AuthService {
   private readonly refreshTtlSeconds: number;
 
   constructor(
-    @InjectRepository(User)
-    private readonly usersRepository: Repository<User>,
+    private readonly userActions: UserActions,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {
     this.redis = new Redis({
       host: this.configService.get<string>('REDIS_HOST'),
       port: this.configService.get<number>('REDIS_PORT'),
-      password: this.configService.get<string>('REDIS_PASSWORD'),
+      password: this.configService.get<string>('REDIS_PASSWORD') || undefined,
     });
 
     const refreshExpires =
@@ -48,21 +46,19 @@ export class AuthService {
   async register(
     dto: RegisterDto,
   ): Promise<{ user: User; accessToken: string; refreshToken: string }> {
-    const existing = await this.usersRepository.findOne({
-      where: { email: dto.email },
-    });
+    const existing = await this.userActions.findByEmail(dto.email);
     if (existing) {
       throw new ConflictException(ERROR_MESSAGES.AUTH_EMAIL_TAKEN);
     }
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
-    const user = this.usersRepository.create({
+    const user = this.userActions.create({
       email: dto.email,
       passwordHash,
       firstName: dto.firstName,
       lastName: dto.lastName,
     });
-    await this.usersRepository.save(user);
+    await this.userActions.save(user);
 
     const tokens = await this.issueTokens(user);
     return { user, ...tokens };
@@ -71,21 +67,7 @@ export class AuthService {
   async login(
     dto: LoginDto,
   ): Promise<{ user: User; accessToken: string; refreshToken: string }> {
-    const user = await this.usersRepository.findOne({
-      where: { email: dto.email },
-      select: [
-        'id',
-        'email',
-        'passwordHash',
-        'role',
-        'isEmailVerified',
-        'firstName',
-        'lastName',
-        'avatarUrl',
-        'createdAt',
-        'updatedAt',
-      ],
-    });
+    const user = await this.userActions.findForAuth(dto.email);
 
     if (!user || !user.passwordHash) {
       throw new UnauthorizedException(ERROR_MESSAGES.AUTH_INVALID_CREDENTIALS);
@@ -112,7 +94,7 @@ export class AuthService {
       );
     }
 
-    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    const user = await this.userActions.findById(userId);
     if (!user) {
       throw new NotFoundException(ERROR_MESSAGES.USER_NOT_FOUND);
     }
@@ -139,22 +121,22 @@ export class AuthService {
       throw new BadRequestException(ERROR_MESSAGES.AUTH_GOOGLE_NO_EMAIL);
     }
 
-    // 1. Try to find an existing user by googleId
-    let user = await this.usersRepository.findOne({ where: { googleId } });
+    // 1. Try to find an existing user by googleId (creatorProfile loaded for isSeller)
+    let user = await this.userActions.findByGoogleId(googleId);
 
     if (!user) {
       // 2. Fall back to email lookup — may be a pre-existing password account
-      user = await this.usersRepository.findOne({ where: { email } });
+      user = await this.userActions.findByEmailWithCreatorProfile(email);
 
       if (user) {
         // Link the Google identity to the existing account
         user.googleId = googleId;
         if (!user.avatarUrl && avatarUrl) user.avatarUrl = avatarUrl;
         user.isEmailVerified = true;
-        await this.usersRepository.save(user);
+        await this.userActions.save(user);
       } else {
         // 3. Brand-new user — create from Google profile
-        user = this.usersRepository.create({
+        user = this.userActions.create({
           email,
           firstName,
           lastName,
@@ -163,7 +145,7 @@ export class AuthService {
           passwordHash: null,
           isEmailVerified: true,
         });
-        await this.usersRepository.save(user);
+        await this.userActions.save(user);
       }
     }
 

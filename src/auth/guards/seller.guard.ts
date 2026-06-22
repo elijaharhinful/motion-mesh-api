@@ -5,21 +5,28 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { User, UserRole } from '../../users/entities/user.entity';
-import { REQUIRE_CREATOR_PROFILE_KEY } from '../../common/decorators/require-creator-profile.decorator';
+import { User } from '../../users/entities/user.entity';
+import { UserRole } from '../../users/enums/user-role.enum';
+import { REQUIRE_SELLER_KEY } from '../../common/decorators/require-seller.decorator';
 import { ERROR_MESSAGES } from '../../common/constants/error-messages.constant';
 
+/**
+ * Authorizes SELLER actions by capability: the authenticated user must have a
+ * CreatorProfile (i.e. `isSeller`). Admins bypass. Active mode is irrelevant —
+ * authorization never trusts the client's mode.
+ * Spec: docs/MotionMesh_Identity_and_ModeSwitching_Spec_v1_0.md §7
+ */
 @Injectable()
-export class CreatorProfileGuard implements CanActivate {
+export class SellerGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const isCreatorProfileRequired = this.reflector.getAllAndOverride<boolean>(
-      REQUIRE_CREATOR_PROFILE_KEY,
+    const isSellerRequired = this.reflector.getAllAndOverride<boolean>(
+      REQUIRE_SELLER_KEY,
       [context.getHandler(), context.getClass()],
     );
 
-    if (!isCreatorProfileRequired) {
+    if (!isSellerRequired) {
       return true;
     }
 

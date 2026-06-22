@@ -14,8 +14,8 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CreatorProfileGuard } from '../auth/guards/creator-profile.guard';
-import { RequireCreatorProfile } from '../common/decorators/require-creator-profile.decorator';
+import { SellerGuard } from '../auth/guards/seller.guard';
+import { RequireSeller } from '../common/decorators/require-seller.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { VideosService } from './videos.service';
@@ -42,8 +42,8 @@ export class VideosController {
   constructor(private readonly videosService: VideosService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard, CreatorProfileGuard)
-  @RequireCreatorProfile()
+  @UseGuards(JwtAuthGuard, SellerGuard)
+  @RequireSeller()
   @ApiCreateVideo()
   async create(@CurrentUser() user: User, @Body() dto: CreateVideoDto) {
     // creatorId is the user's creatorProfile.id, resolved from creatorId FK
@@ -69,8 +69,8 @@ export class VideosController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard, CreatorProfileGuard)
-  @RequireCreatorProfile()
+  @UseGuards(JwtAuthGuard, SellerGuard)
+  @RequireSeller()
   @ApiUpdateVideo()
   async update(
     @CurrentUser() user: User,
@@ -87,16 +87,16 @@ export class VideosController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @UseGuards(JwtAuthGuard, CreatorProfileGuard)
-  @RequireCreatorProfile()
+  @UseGuards(JwtAuthGuard, SellerGuard)
+  @RequireSeller()
   @ApiDeleteVideo()
   delete(@CurrentUser() user: User, @Param('id', ParseUUIDPipe) id: string) {
     return this.videosService.delete(id, user.creatorProfile?.id ?? user.id);
   }
 
   @Post(':id/publish')
-  @UseGuards(JwtAuthGuard, CreatorProfileGuard)
-  @RequireCreatorProfile()
+  @UseGuards(JwtAuthGuard, SellerGuard)
+  @RequireSeller()
   @ApiPublishVideo()
   async publish(
     @CurrentUser() user: User,
@@ -110,8 +110,8 @@ export class VideosController {
   }
 
   @Post(':id/presigned-url')
-  @UseGuards(JwtAuthGuard, CreatorProfileGuard)
-  @RequireCreatorProfile()
+  @UseGuards(JwtAuthGuard, SellerGuard)
+  @RequireSeller()
   @ApiGetVideoPresignedUrl()
   async getPresignedUrl(
     @CurrentUser() user: User,

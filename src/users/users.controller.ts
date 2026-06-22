@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { User } from './entities/user.entity';
 import { UsersService } from './users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdateActiveModeDto } from './dto/update-active-mode.dto';
 import { ApiGetMe, ApiUpdateMe, ApiDeleteMe } from './swagger/users.swagger';
 import {
   SUCCESS_MESSAGES,
@@ -41,6 +42,15 @@ export class UsersController {
   ) {
     const data = await this.usersService.updateProfile(user.id, dto);
     return { _message: SUCCESS_MESSAGES.PROFILE_UPDATED, data };
+  }
+
+  @Patch('me/active-mode')
+  async updateActiveMode(
+    @CurrentUser() user: User,
+    @Body() dto: UpdateActiveModeDto,
+  ) {
+    const data = await this.usersService.updateActiveMode(user.id, dto.mode);
+    return { _message: SUCCESS_MESSAGES.ACTIVE_MODE_UPDATED, data };
   }
 
   @Delete('me')

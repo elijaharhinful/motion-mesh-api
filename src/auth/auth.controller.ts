@@ -128,14 +128,14 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   @ApiGoogleCallback()
-  async googleCallback(
+  googleCallback(
     @Req()
     req: Request & {
       user: { user: User; accessToken: string; refreshToken: string };
     },
     @Res() res: Response,
-  ): Promise<void> {
-    const { user: _user, accessToken, refreshToken } = req.user;
+  ): void {
+    const { accessToken, refreshToken } = req.user;
     this.setRefreshCookie(
       res as unknown as import('express').Response,
       refreshToken,

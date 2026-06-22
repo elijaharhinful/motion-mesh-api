@@ -16,7 +16,8 @@ export class StorageService {
 
   constructor(private readonly configService: ConfigService) {
     const endpoint = configService.get<string>('S3_ENDPOINT');
-    this.presignedUrlTtl = configService.get<number>('S3_PRESIGNED_URL_TTL_SECONDS') ?? 1800;
+    this.presignedUrlTtl =
+      configService.get<number>('S3_PRESIGNED_URL_TTL_SECONDS') ?? 1800;
 
     this.s3Client = new S3Client({
       region: configService.get<string>('S3_REGION') ?? 'us-east-1',

@@ -1,12 +1,8 @@
-import { Column, Entity, OneToOne } from 'typeorm';
+import { AfterLoad, Column, Entity, OneToOne } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { CreatorProfile } from '../../creators/entities/creator-profile.entity';
-
-export enum UserRole {
-  USER = 'user',
-  CREATOR = 'creator',
-  ADMIN = 'admin',
-}
+import { UserRole } from '../enums/user-role.enum';
+import { ActiveMode } from '../enums/active-mode.enum';
 
 @Entity('users')
 export class User extends BaseEntity {
@@ -22,8 +18,12 @@ export class User extends BaseEntity {
   @Column({ length: 100 })
   lastName: string;
 
-  @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.MEMBER })
   role: UserRole;
+
+  /** Non-authoritative UI preference so a returning device restores the last workspace. */
+  @Column({ type: 'enum', enum: ActiveMode, nullable: true })
+  lastActiveMode: ActiveMode | null;
 
   @Column({ default: false })
   isEmailVerified: boolean;
@@ -39,4 +39,17 @@ export class User extends BaseEntity {
     cascade: false,
   })
   creatorProfile: CreatorProfile | null;
+
+  /**
+   * Derived seller capability — true when an active CreatorProfile exists.
+   * Not a column; populated after load and serialized in responses so the
+   * frontend can render the correct mode control. Only accurate when the
+   * `creatorProfile` relation is loaded (auth + /users/me paths load it).
+   */
+  isSeller = false;
+
+  @AfterLoad()
+  private deriveIsSeller(): void {
+    this.isSeller = !!this.creatorProfile;
+  }
 }

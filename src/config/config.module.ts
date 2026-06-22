@@ -5,7 +5,9 @@ export const configModuleOptions: ConfigModuleOptions = {
   isGlobal: true,
   envFilePath: '.env',
   validationSchema: Joi.object({
-    NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
+    NODE_ENV: Joi.string()
+      .valid('development', 'production', 'test')
+      .default('development'),
     PORT: Joi.number().default(3000),
     API_PREFIX: Joi.string().default('api/v1'),
 
@@ -17,7 +19,8 @@ export const configModuleOptions: ConfigModuleOptions = {
 
     REDIS_HOST: Joi.string().required(),
     REDIS_PORT: Joi.number().default(6379),
-    REDIS_PASSWORD: Joi.string().required(),
+    // Allow empty for passwordless local/WSL Redis. When empty, ioredis skips AUTH.
+    REDIS_PASSWORD: Joi.string().allow('').optional(),
 
     JWT_SECRET: Joi.string().required(),
     JWT_ACCESS_EXPIRES_IN: Joi.string().default('15m'),

@@ -2,6 +2,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
@@ -17,8 +18,7 @@ async function bootstrap() {
 
   // ─── Global Configuration ─────────────────────────────────────────────────
   app.setGlobalPrefix(apiPrefix);
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-  app.use(require('cookie-parser')());
+  app.use(cookieParser());
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -57,7 +57,9 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   await app.listen(port);
-  console.log(`MotionMesh API running on http://localhost:${port}/${apiPrefix}`);
+  console.log(
+    `MotionMesh API running on http://localhost:${port}/${apiPrefix}`,
+  );
   console.log(`Swagger UI available at http://localhost:${port}/api/docs`);
 }
 

@@ -3,12 +3,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CreatorProfile } from './entities/creator-profile.entity';
 import { CreatorsController } from './creators.controller';
 import { CreatorsService } from './creators.service';
-import { User } from '../users/entities/user.entity';
+import { CreatorProfileActions } from './actions/creator-profile.actions';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([CreatorProfile, User])],
+  imports: [TypeOrmModule.forFeature([CreatorProfile])],
   controllers: [CreatorsController],
-  providers: [CreatorsService],
-  exports: [CreatorsService],
+  providers: [CreatorsService, CreatorProfileActions],
+  exports: [CreatorsService, CreatorProfileActions],
 })
 export class CreatorsModule {}

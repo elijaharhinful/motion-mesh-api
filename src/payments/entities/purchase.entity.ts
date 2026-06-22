@@ -2,13 +2,7 @@ import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
 import { DanceVideo } from '../../videos/entities/dance-video.entity';
-
-export enum PurchaseStatus {
-  PENDING = 'pending',
-  SUCCEEDED = 'succeeded',
-  FAILED = 'failed',
-  REFUNDED = 'refunded',
-}
+import { PurchaseStatus } from '../enums/purchase-status.enum';
 
 @Entity('purchases')
 export class Purchase extends BaseEntity {
@@ -22,7 +16,9 @@ export class Purchase extends BaseEntity {
   @Column()
   videoId: string;
 
-  @ManyToOne(() => DanceVideo, (video) => video.purchases, { onDelete: 'CASCADE' })
+  @ManyToOne(() => DanceVideo, (video) => video.purchases, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'videoId' })
   video: DanceVideo;
 
@@ -38,6 +34,10 @@ export class Purchase extends BaseEntity {
   @Column({ type: 'int', comment: '70% creator payout in cents' })
   creatorPayoutCents: number;
 
-  @Column({ type: 'enum', enum: PurchaseStatus, default: PurchaseStatus.PENDING })
+  @Column({
+    type: 'enum',
+    enum: PurchaseStatus,
+    default: PurchaseStatus.PENDING,
+  })
   status: PurchaseStatus;
 }

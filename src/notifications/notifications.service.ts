@@ -9,7 +9,9 @@ export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
   constructor(private readonly configService: ConfigService) {
-    this.fromAddress = configService.get<string>('EMAIL_FROM') ?? 'MotionMesh <no-reply@motionmesh.com>';
+    this.fromAddress =
+      configService.get<string>('EMAIL_FROM') ??
+      'MotionMesh <no-reply@motionmesh.com>';
     this.transporter = nodemailer.createTransport({
       host: configService.get<string>('SMTP_HOST'),
       port: configService.get<number>('SMTP_PORT') ?? 587,
@@ -39,7 +41,10 @@ export class NotificationsService {
     );
   }
 
-  async sendPayoutNotification(toEmail: string, amountCents: number): Promise<void> {
+  async sendPayoutNotification(
+    toEmail: string,
+    amountCents: number,
+  ): Promise<void> {
     const amount = (amountCents / 100).toFixed(2);
     await this.send(
       toEmail,
@@ -60,7 +65,9 @@ export class NotificationsService {
       });
       this.logger.log(`Email sent to ${to}: ${subject}`);
     } catch (err) {
-      this.logger.error(`Failed to send email to ${to}: ${(err as Error).message}`);
+      this.logger.error(
+        `Failed to send email to ${to}: ${(err as Error).message}`,
+      );
     }
   }
 }

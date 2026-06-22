@@ -8,7 +8,8 @@ import {
   Min,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { VideoCategory, VideoDifficulty } from '../entities/dance-video.entity';
+import { VideoCategory } from '../enums/video-category.enum';
+import { VideoDifficulty } from '../enums/video-difficulty.enum';
 
 export class UpdateVideoDto {
   @ApiPropertyOptional()

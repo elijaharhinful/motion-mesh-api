@@ -12,6 +12,7 @@ export const SUCCESS_MESSAGES = {
     'Your password has been reset successfully. Please log in.',
   // Users
   PROFILE_UPDATED: 'Your profile has been updated successfully.',
+  ACTIVE_MODE_UPDATED: 'Workspace mode updated.',
   ACCOUNT_DELETE_REQUESTED:
     'Your account deletion request has been received and will be processed within 30 days.',
   // Creators

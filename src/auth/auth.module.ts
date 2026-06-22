@@ -2,12 +2,11 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from '../users/entities/user.entity';
+import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { CreatorProfileGuard } from './guards/creator-profile.guard';
+import { SellerGuard } from './guards/seller.guard';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 
@@ -21,7 +20,7 @@ import { GoogleStrategy } from './strategies/google.strategy';
         signOptions: { expiresIn: '15m' },
       }),
     }),
-    TypeOrmModule.forFeature([User]),
+    UsersModule,
   ],
   controllers: [AuthController],
   providers: [
@@ -29,14 +28,8 @@ import { GoogleStrategy } from './strategies/google.strategy';
     JwtStrategy,
     GoogleStrategy,
     JwtAuthGuard,
-    CreatorProfileGuard,
+    SellerGuard,
   ],
-  exports: [
-    AuthService,
-    JwtAuthGuard,
-    CreatorProfileGuard,
-    JwtModule,
-    PassportModule,
-  ],
+  exports: [AuthService, JwtAuthGuard, SellerGuard, JwtModule, PassportModule],
 })
 export class AuthModule {}

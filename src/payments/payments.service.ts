@@ -4,12 +4,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
 import Stripe from 'stripe';
-import { Repository } from 'typeorm';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant';
-import { DanceVideo, VideoStatus } from '../videos/entities/dance-video.entity';
-import { Purchase, PurchaseStatus } from './entities/purchase.entity';
+import { VideoStatus } from '../videos/enums/video-status.enum';
+import { DanceVideoActions } from '../videos/actions/dance-video.actions';
+import { Purchase } from './entities/purchase.entity';
+import { PurchaseStatus } from './enums/purchase-status.enum';
+import { PurchaseActions } from './actions/purchase.actions';
 import { CreatePaymentIntentDto } from './dto/create-payment-intent.dto';
 
 @Injectable()
@@ -18,10 +19,8 @@ export class PaymentsService {
   private readonly commissionPercent: number;
 
   constructor(
-    @InjectRepository(Purchase)
-    private readonly purchasesRepository: Repository<Purchase>,
-    @InjectRepository(DanceVideo)
-    private readonly videosRepository: Repository<DanceVideo>,
+    private readonly purchaseActions: PurchaseActions,
+    private readonly videoActions: DanceVideoActions,
     private readonly configService: ConfigService,
   ) {
     this.stripe = new Stripe(
@@ -36,10 +35,7 @@ export class PaymentsService {
     userId: string,
     dto: CreatePaymentIntentDto,
   ): Promise<{ clientSecret: string; purchaseId: string }> {
-    const video = await this.videosRepository.findOne({
-      where: { id: dto.videoId },
-      relations: ['creator'],
-    });
+    const video = await this.videoActions.findByIdWithCreator(dto.videoId);
 
     if (!video) throw new NotFoundException(ERROR_MESSAGES.VIDEO_NOT_FOUND);
     if (video.status !== VideoStatus.PUBLISHED) {
@@ -47,15 +43,18 @@ export class PaymentsService {
     }
 
     // Check duplicate purchase
-    const existing = await this.purchasesRepository.findOne({
-      where: { userId, videoId: dto.videoId, status: PurchaseStatus.SUCCEEDED },
-    });
+    const existing = await this.purchaseActions.findSucceededByUserAndVideo(
+      userId,
+      dto.videoId,
+    );
     if (existing) {
       throw new ConflictException(ERROR_MESSAGES.ALREADY_PURCHASED);
     }
 
     const amountCents = video.priceCents;
-    const platformFeeCents = Math.round(amountCents * (this.commissionPercent / 100));
+    const platformFeeCents = Math.round(
+      amountCents * (this.commissionPercent / 100),
+    );
     const creatorPayoutCents = amountCents - platformFeeCents;
 
     const paymentIntent = await this.stripe.paymentIntents.create({
@@ -64,7 +63,7 @@ export class PaymentsService {
       metadata: { userId, videoId: dto.videoId },
     });
 
-    const purchase = this.purchasesRepository.create({
+    const purchase = this.purchaseActions.create({
       userId,
       videoId: dto.videoId,
       stripePaymentIntentId: paymentIntent.id,
@@ -73,7 +72,7 @@ export class PaymentsService {
       creatorPayoutCents,
       status: PurchaseStatus.PENDING,
     });
-    const saved = await this.purchasesRepository.save(purchase);
+    const saved = await this.purchaseActions.save(purchase);
 
     return {
       clientSecret: paymentIntent.client_secret ?? '',
@@ -82,30 +81,26 @@ export class PaymentsService {
   }
 
   async confirmPurchase(stripePaymentIntentId: string): Promise<void> {
-    await this.purchasesRepository.update(
-      { stripePaymentIntentId },
-      { status: PurchaseStatus.SUCCEEDED },
+    await this.purchaseActions.updateStatusByPaymentIntentId(
+      stripePaymentIntentId,
+      PurchaseStatus.SUCCEEDED,
     );
   }
 
   async markPurchaseFailed(stripePaymentIntentId: string): Promise<void> {
-    await this.purchasesRepository.update(
-      { stripePaymentIntentId },
-      { status: PurchaseStatus.FAILED },
+    await this.purchaseActions.updateStatusByPaymentIntentId(
+      stripePaymentIntentId,
+      PurchaseStatus.FAILED,
     );
   }
 
   async listUserPurchases(userId: string): Promise<Purchase[]> {
-    return this.purchasesRepository.find({
-      where: { userId, status: PurchaseStatus.SUCCEEDED },
-      relations: ['video'],
-      order: { createdAt: 'DESC' },
-    });
+    return this.purchaseActions.listSucceededByUser(userId);
   }
 
-  async findByPaymentIntentId(stripePaymentIntentId: string): Promise<Purchase | null> {
-    return this.purchasesRepository.findOne({
-      where: { stripePaymentIntentId },
-    });
+  async findByPaymentIntentId(
+    stripePaymentIntentId: string,
+  ): Promise<Purchase | null> {
+    return this.purchaseActions.findByPaymentIntentId(stripePaymentIntentId);
   }
 }

@@ -19,16 +19,23 @@ export class WebhooksService {
       configService.get<string>('STRIPE_SECRET_KEY') ?? '',
       { apiVersion: '2026-02-25.clover' },
     );
-    this.webhookSecret = configService.get<string>('STRIPE_WEBHOOK_SECRET') ?? '';
+    this.webhookSecret =
+      configService.get<string>('STRIPE_WEBHOOK_SECRET') ?? '';
   }
 
   async handleStripeWebhook(rawBody: Buffer, signature: string): Promise<void> {
     let event: Stripe.Event;
 
     try {
-      event = this.stripe.webhooks.constructEvent(rawBody, signature, this.webhookSecret);
+      event = this.stripe.webhooks.constructEvent(
+        rawBody,
+        signature,
+        this.webhookSecret,
+      );
     } catch (err) {
-      this.logger.warn(`Webhook signature verification failed: ${(err as Error).message}`);
+      this.logger.warn(
+        `Webhook signature verification failed: ${(err as Error).message}`,
+      );
       throw new BadRequestException('Invalid Stripe webhook signature');
     }
 
@@ -36,26 +43,28 @@ export class WebhooksService {
 
     switch (event.type) {
       case 'payment_intent.succeeded': {
-        const pi = event.data.object as Stripe.PaymentIntent;
+        const pi = event.data.object;
         await this.paymentsService.confirmPurchase(pi.id);
         this.logger.log(`Purchase confirmed for PaymentIntent ${pi.id}`);
         break;
       }
       case 'payment_intent.payment_failed': {
-        const pi = event.data.object as Stripe.PaymentIntent;
+        const pi = event.data.object;
         await this.paymentsService.markPurchaseFailed(pi.id);
         this.logger.log(`Purchase failed for PaymentIntent ${pi.id}`);
         break;
       }
       case 'account.updated': {
         // Stripe Connect account updated — can be used to update creator verification
-        const account = event.data.object as Stripe.Account;
+        const account = event.data.object;
         this.logger.log(`Stripe Connect account updated: ${account.id}`);
         break;
       }
       case 'payout.paid': {
-        const payout = event.data.object as Stripe.Payout;
-        this.logger.log(`Payout completed: ${payout.id}, amount: ${payout.amount}`);
+        const payout = event.data.object;
+        this.logger.log(
+          `Payout completed: ${payout.id}, amount: ${payout.amount}`,
+        );
         break;
       }
       default:

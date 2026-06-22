@@ -2,13 +2,7 @@ import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../../common/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
 import { Purchase } from '../../payments/entities/purchase.entity';
-
-export enum GenerationJobStatus {
-  PENDING = 'pending',
-  PROCESSING = 'processing',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
-}
+import { GenerationJobStatus } from '../enums/generation-job-status.enum';
 
 @Entity('generation_jobs')
 export class GenerationJob extends BaseEntity {
@@ -32,7 +26,11 @@ export class GenerationJob extends BaseEntity {
   @Column({ comment: 'S3 key of the face photo uploaded by the user' })
   facePhotoS3Key: string;
 
-  @Column({ type: 'varchar', nullable: true, comment: 'S3 key of the final generated video' })
+  @Column({
+    type: 'varchar',
+    nullable: true,
+    comment: 'S3 key of the final generated video',
+  })
   resultVideoS3Key: string | null;
 
   @Column({ type: 'varchar', nullable: true })
@@ -45,6 +43,10 @@ export class GenerationJob extends BaseEntity {
   })
   status: GenerationJobStatus;
 
-  @Column({ type: 'text', nullable: true, comment: 'Error message if job failed' })
+  @Column({
+    type: 'text',
+    nullable: true,
+    comment: 'Error message if job failed',
+  })
   errorMessage: string | null;
 }

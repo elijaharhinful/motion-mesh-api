@@ -1,7 +1,8 @@
 import { IsEnum, IsInt, IsOptional, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { VideoCategory, VideoDifficulty } from '../entities/dance-video.entity';
+import { VideoCategory } from '../enums/video-category.enum';
+import { VideoDifficulty } from '../enums/video-difficulty.enum';
 
 export class ListVideosDto {
   @ApiPropertyOptional({ enum: VideoCategory })

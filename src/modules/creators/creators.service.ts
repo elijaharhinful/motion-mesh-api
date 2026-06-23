@@ -23,6 +23,7 @@ export class CreatorsService {
 
     const profile = this.creatorActions.create({
       userId: user.id,
+      displayName: dto.displayName,
       bio: dto.bio ?? null,
       socialLink: dto.socialLink ?? null,
     });

@@ -12,6 +12,10 @@ export class CreatorProfile extends BaseEntity {
   @JoinColumn({ name: 'userId' })
   user: User;
 
+  /** Public seller name shown on listings and the creator profile page. */
+  @Column({ length: 100 })
+  displayName: string;
+
   @Column({ type: 'text', nullable: true })
   bio: string | null;
 

@@ -62,6 +62,47 @@ export const ApiLogout = () =>
     }),
   );
 
+export const ApiVerifyEmail = () =>
+  applyDecorators(
+    ApiOperation({
+      summary: 'Verify an email address using the emailed token',
+    }),
+    ApiResponse({ status: HttpStatus.OK, description: 'Email verified.' }),
+    ApiResponse({
+      status: HttpStatus.BAD_REQUEST,
+      description: 'Verification token invalid or expired.',
+    }),
+  );
+
+export const ApiResendVerification = () =>
+  applyDecorators(
+    ApiOperation({ summary: 'Resend the email verification link' }),
+    ApiResponse({
+      status: HttpStatus.OK,
+      description:
+        'If the account exists and is unverified, a link has been sent.',
+    }),
+  );
+
+export const ApiForgotPassword = () =>
+  applyDecorators(
+    ApiOperation({ summary: 'Request a password reset link' }),
+    ApiResponse({
+      status: HttpStatus.OK,
+      description: 'If the account exists, a reset link has been sent.',
+    }),
+  );
+
+export const ApiResetPassword = () =>
+  applyDecorators(
+    ApiOperation({ summary: 'Reset the password using the emailed token' }),
+    ApiResponse({ status: HttpStatus.OK, description: 'Password reset.' }),
+    ApiResponse({
+      status: HttpStatus.BAD_REQUEST,
+      description: 'Reset token invalid or expired.',
+    }),
+  );
+
 export const ApiGoogleAuth = () =>
   applyDecorators(
     ApiOperation({

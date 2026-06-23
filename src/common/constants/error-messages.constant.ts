@@ -4,6 +4,11 @@ export const ERROR_MESSAGES = {
   AUTH_INVALID_CREDENTIALS: 'Invalid email or password.',
   AUTH_EMAIL_NOT_VERIFIED: 'Please verify your email before logging in.',
   AUTH_INVALID_REFRESH_TOKEN: 'Refresh token is invalid or expired.',
+  AUTH_INVALID_VERIFICATION_TOKEN:
+    'This verification link is invalid or has expired.',
+  AUTH_INVALID_RESET_TOKEN:
+    'This password reset link is invalid or has expired.',
+  AUTH_EMAIL_ALREADY_VERIFIED: 'This email address is already verified.',
   AUTH_UNAUTHORIZED: 'You must be logged in to perform this action.',
   AUTH_GOOGLE_NO_EMAIL: 'Google account did not provide an email address.',
 

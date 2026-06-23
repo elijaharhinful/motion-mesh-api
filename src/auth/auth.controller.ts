@@ -15,6 +15,10 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
@@ -23,6 +27,10 @@ import {
   ApiLogin,
   ApiRefresh,
   ApiLogout,
+  ApiVerifyEmail,
+  ApiResendVerification,
+  ApiForgotPassword,
+  ApiResetPassword,
   ApiGoogleAuth,
   ApiGoogleCallback,
 } from './swagger/auth.swagger';
@@ -41,17 +49,42 @@ export class AuthController {
 
   @Post('register')
   @ApiRegister()
-  async register(
-    @Body() dto: RegisterDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const { user, accessToken, refreshToken } =
-      await this.authService.register(dto);
-    this.setRefreshCookie(res, refreshToken);
-    return {
-      _message: SUCCESS_MESSAGES.REGISTER_SUCCESS,
-      data: { user, accessToken },
-    };
+  async register(@Body() dto: RegisterDto) {
+    // No session is issued — the user must verify their email before logging in.
+    const { user } = await this.authService.register(dto);
+    return { _message: SUCCESS_MESSAGES.REGISTER_SUCCESS, data: { user } };
+  }
+
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiVerifyEmail()
+  async verifyEmail(@Body() dto: VerifyEmailDto) {
+    const user = await this.authService.verifyEmail(dto.token);
+    return { _message: SUCCESS_MESSAGES.EMAIL_VERIFIED, data: { user } };
+  }
+
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  @ApiResendVerification()
+  async resendVerification(@Body() dto: ResendVerificationDto) {
+    await this.authService.resendVerification(dto.email);
+    return { _message: SUCCESS_MESSAGES.VERIFICATION_EMAIL_SENT };
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiForgotPassword()
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    await this.authService.forgotPassword(dto.email);
+    return { _message: SUCCESS_MESSAGES.PASSWORD_RESET_SENT };
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiResetPassword()
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    await this.authService.resetPassword(dto.token, dto.password);
+    return { _message: SUCCESS_MESSAGES.PASSWORD_RESET_SUCCESS };
   }
 
   @Post('login')

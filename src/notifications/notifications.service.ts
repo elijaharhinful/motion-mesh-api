@@ -23,6 +23,32 @@ export class NotificationsService {
     });
   }
 
+  async sendVerificationEmail(
+    toEmail: string,
+    verifyUrl: string,
+  ): Promise<void> {
+    await this.send(
+      toEmail,
+      'Verify your MotionMesh email',
+      `<p>Welcome to MotionMesh! Please confirm your email address to activate your account.</p>
+       <p><a href="${verifyUrl}">Verify my email</a></p>
+       <p>This link expires in 24 hours. If you didn't create an account, you can ignore this email.</p>`,
+    );
+  }
+
+  async sendPasswordResetEmail(
+    toEmail: string,
+    resetUrl: string,
+  ): Promise<void> {
+    await this.send(
+      toEmail,
+      'Reset your MotionMesh password',
+      `<p>We received a request to reset your password.</p>
+       <p><a href="${resetUrl}">Reset my password</a></p>
+       <p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>`,
+    );
+  }
+
   async sendGenerationComplete(toEmail: string, jobId: string): Promise<void> {
     await this.send(
       toEmail,

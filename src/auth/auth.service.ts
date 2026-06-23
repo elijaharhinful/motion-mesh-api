@@ -1,7 +1,9 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -13,6 +15,7 @@ import Redis from 'ioredis';
 import { ERROR_MESSAGES } from '../common/constants/error-messages.constant';
 import { User } from '../users/entities/user.entity';
 import { UserActions } from '../users/actions/user.actions';
+import { NotificationsService } from '../notifications/notifications.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
@@ -20,16 +23,23 @@ import { Profile as GoogleProfile } from 'passport-google-oauth20';
 
 const BCRYPT_ROUNDS = 12;
 const REDIS_REFRESH_PREFIX = 'refresh:';
+const REDIS_VERIFY_PREFIX = 'verify:';
+const REDIS_RESET_PREFIX = 'reset:';
+const VERIFY_TTL_SECONDS = 24 * 60 * 60; // 24 hours
+const RESET_TTL_SECONDS = 60 * 60; // 1 hour
 
 @Injectable()
 export class AuthService {
   private readonly redis: Redis;
   private readonly refreshTtlSeconds: number;
+  private readonly frontendUrl: string;
+  private readonly logger = new Logger(AuthService.name);
 
   constructor(
     private readonly userActions: UserActions,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly notificationsService: NotificationsService,
   ) {
     this.redis = new Redis({
       host: this.configService.get<string>('REDIS_HOST'),
@@ -37,15 +47,20 @@ export class AuthService {
       password: this.configService.get<string>('REDIS_PASSWORD') || undefined,
     });
 
+    this.frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') ?? 'http://localhost:3000';
+
     const refreshExpires =
       this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') ?? '7d';
     // Convert '7d' → seconds
     this.refreshTtlSeconds = this.parseDurationSeconds(refreshExpires);
   }
 
-  async register(
-    dto: RegisterDto,
-  ): Promise<{ user: User; accessToken: string; refreshToken: string }> {
+  /**
+   * Registers a new account but does NOT log the user in — they must verify
+   * their email first (see `verifyEmail`). A verification link is emailed.
+   */
+  async register(dto: RegisterDto): Promise<{ user: User }> {
     const existing = await this.userActions.findByEmail(dto.email);
     if (existing) {
       throw new ConflictException(ERROR_MESSAGES.AUTH_EMAIL_TAKEN);
@@ -58,10 +73,10 @@ export class AuthService {
       firstName: dto.firstName,
       lastName: dto.lastName,
     });
-    await this.userActions.save(user);
+    const saved = await this.userActions.save(user);
 
-    const tokens = await this.issueTokens(user);
-    return { user, ...tokens };
+    await this.sendVerificationEmail(saved);
+    return { user: saved };
   }
 
   async login(
@@ -78,8 +93,69 @@ export class AuthService {
       throw new UnauthorizedException(ERROR_MESSAGES.AUTH_INVALID_CREDENTIALS);
     }
 
+    if (!user.isEmailVerified) {
+      throw new ForbiddenException(ERROR_MESSAGES.AUTH_EMAIL_NOT_VERIFIED);
+    }
+
     const tokens = await this.issueTokens(user);
     return { user, ...tokens };
+  }
+
+  /** Confirms an email address using the token from the verification link. */
+  async verifyEmail(token: string): Promise<User> {
+    const userId = await this.consumeToken(REDIS_VERIFY_PREFIX, token);
+    if (!userId) {
+      throw new BadRequestException(
+        ERROR_MESSAGES.AUTH_INVALID_VERIFICATION_TOKEN,
+      );
+    }
+
+    const user = await this.userActions.findById(userId);
+    if (!user) {
+      throw new NotFoundException(ERROR_MESSAGES.USER_NOT_FOUND);
+    }
+
+    user.isEmailVerified = true;
+    return this.userActions.save(user);
+  }
+
+  /** Re-sends a verification link. Always resolves (no account enumeration). */
+  async resendVerification(email: string): Promise<void> {
+    const user = await this.userActions.findByEmail(email);
+    if (user && !user.isEmailVerified) {
+      await this.sendVerificationEmail(user);
+    }
+  }
+
+  /** Starts a password reset. Always resolves (no account enumeration). */
+  async forgotPassword(email: string): Promise<void> {
+    const user = await this.userActions.findByEmail(email);
+    if (!user) return;
+
+    const token = await this.createToken(
+      REDIS_RESET_PREFIX,
+      user.id,
+      RESET_TTL_SECONDS,
+    );
+    const url = `${this.frontendUrl}/reset-password?token=${token}`;
+    this.logDevLink('Password reset', user.email, url);
+    await this.notificationsService.sendPasswordResetEmail(user.email, url);
+  }
+
+  /** Completes a password reset using the token from the reset link. */
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const userId = await this.consumeToken(REDIS_RESET_PREFIX, token);
+    if (!userId) {
+      throw new BadRequestException(ERROR_MESSAGES.AUTH_INVALID_RESET_TOKEN);
+    }
+
+    const user = await this.userActions.findById(userId);
+    if (!user) {
+      throw new NotFoundException(ERROR_MESSAGES.USER_NOT_FOUND);
+    }
+
+    user.passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await this.userActions.save(user);
   }
 
   async refresh(
@@ -135,7 +211,7 @@ export class AuthService {
         user.isEmailVerified = true;
         await this.userActions.save(user);
       } else {
-        // 3. Brand-new user — create from Google profile
+        // 3. Brand-new user — create from Google profile (Google already verified email)
         user = this.userActions.create({
           email,
           firstName,
@@ -153,6 +229,47 @@ export class AuthService {
   }
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
+
+  private async sendVerificationEmail(user: User): Promise<void> {
+    const token = await this.createToken(
+      REDIS_VERIFY_PREFIX,
+      user.id,
+      VERIFY_TTL_SECONDS,
+    );
+    const url = `${this.frontendUrl}/verify-email?token=${token}`;
+    this.logDevLink('Verification', user.email, url);
+    await this.notificationsService.sendVerificationEmail(user.email, url);
+  }
+
+  private async createToken(
+    prefix: string,
+    userId: string,
+    ttlSeconds: number,
+  ): Promise<string> {
+    const token = randomBytes(32).toString('hex');
+    await this.redis.set(`${prefix}${token}`, userId, 'EX', ttlSeconds);
+    return token;
+  }
+
+  /** Reads and deletes a single-use token, returning the associated userId. */
+  private async consumeToken(
+    prefix: string,
+    token: string,
+  ): Promise<string | null> {
+    const key = `${prefix}${token}`;
+    const userId = await this.redis.get(key);
+    if (userId) {
+      await this.redis.del(key);
+    }
+    return userId;
+  }
+
+  /** Logs the email link to the server console outside production, to ease testing. */
+  private logDevLink(kind: string, email: string, url: string): void {
+    if (this.configService.get<string>('NODE_ENV') !== 'production') {
+      this.logger.log(`[dev] ${kind} link for ${email}: ${url}`);
+    }
+  }
 
   /** Converts a duration string (e.g. '7d', '24h', '30m', '60s') to seconds. */
   private parseDurationSeconds(duration: string): number {

@@ -25,6 +25,12 @@ export class StorageService {
         accessKeyId: configService.get<string>('S3_ACCESS_KEY') ?? '',
         secretAccessKey: configService.get<string>('S3_SECRET_KEY') ?? '',
       },
+      // Cloudflare R2 (and MinIO) are not S3-checksum compatible. Newer
+      // @aws-sdk versions add CRC32 integrity headers by default, which get
+      // baked into presigned-URL signatures and cause uploads to fail. Only
+      // calculate/validate checksums when the operation actually requires it.
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
       ...(endpoint ? { endpoint, forcePathStyle: true } : {}),
     });
   }
@@ -54,6 +60,27 @@ export class StorageService {
     return getSignedUrl(this.s3Client, command, {
       expiresIn: ttlSeconds ?? this.presignedUrlTtl,
     });
+  }
+
+  /**
+   * Uploads a buffer to storage from the server side. Used when the app itself
+   * (not the browser) is the source of the bytes, e.g. persisting an AI result
+   * fetched from a third-party provider into our own bucket.
+   */
+  async putObject(
+    bucket: string,
+    key: string,
+    body: Buffer,
+    contentType: string,
+  ): Promise<void> {
+    await this.s3Client.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: body,
+        ContentType: contentType,
+      }),
+    );
   }
 
   async deleteObject(bucket: string, key: string): Promise<void> {

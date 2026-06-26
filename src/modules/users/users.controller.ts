@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Patch,
+  Post,
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
@@ -15,7 +16,13 @@ import { User } from './entities/user.entity';
 import { UsersService } from './users.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateActiveModeDto } from './dto/update-active-mode.dto';
-import { ApiGetMe, ApiUpdateMe, ApiDeleteMe } from './swagger/users.swagger';
+import { AvatarUploadDto } from './dto/avatar-upload.dto';
+import {
+  ApiGetMe,
+  ApiUpdateMe,
+  ApiDeleteMe,
+  ApiGetAvatarUploadUrl,
+} from './swagger/users.swagger';
 import {
   SUCCESS_MESSAGES,
   fetchSuccess,
@@ -42,6 +49,19 @@ export class UsersController {
   ) {
     const data = await this.usersService.updateProfile(user.id, dto);
     return { _message: SUCCESS_MESSAGES.PROFILE_UPDATED, data };
+  }
+
+  @Post('me/avatar/presigned-url')
+  @ApiGetAvatarUploadUrl()
+  async getAvatarUploadUrl(
+    @CurrentUser() user: User,
+    @Body() dto: AvatarUploadDto,
+  ) {
+    const data = await this.usersService.getAvatarUploadUrl(
+      user.id,
+      dto.contentType,
+    );
+    return { _message: SUCCESS_MESSAGES.PRESIGNED_URL_CREATED, data };
   }
 
   @Patch('me/active-mode')

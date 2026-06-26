@@ -30,6 +30,27 @@ export const ApiUpdateMe = () =>
     }),
   );
 
+export const ApiGetAvatarUploadUrl = () =>
+  applyDecorators(
+    ApiBearerAuth(),
+    ApiOperation({
+      summary:
+        'Get a presigned URL to upload a profile avatar directly to storage',
+    }),
+    ApiResponse({
+      status: HttpStatus.CREATED,
+      description: 'Presigned upload URL and object key returned.',
+    }),
+    ApiResponse({
+      status: HttpStatus.UNAUTHORIZED,
+      description: 'Not authenticated.',
+    }),
+    ApiResponse({
+      status: HttpStatus.BAD_REQUEST,
+      description: 'Unsupported image content type.',
+    }),
+  );
+
 export const ApiDeleteMe = () =>
   applyDecorators(
     ApiBearerAuth(),

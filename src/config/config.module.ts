@@ -26,13 +26,12 @@ export const configModuleOptions: ConfigModuleOptions = {
     JWT_ACCESS_EXPIRES_IN: Joi.string().default('15m'),
     JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
 
-    STORAGE_PROVIDER: Joi.string().valid('minio', 's3').default('minio'),
+    STORAGE_PROVIDER: Joi.string().valid('minio', 's3', 'r2').default('minio'),
     S3_ENDPOINT: Joi.string().optional(),
     S3_REGION: Joi.string().required(),
     S3_ACCESS_KEY: Joi.string().required(),
     S3_SECRET_KEY: Joi.string().required(),
-    S3_BUCKET_VIDEOS: Joi.string().required(),
-    S3_BUCKET_GENERATIONS: Joi.string().required(),
+    S3_BUCKET: Joi.string().required(),
     S3_PRESIGNED_URL_TTL_SECONDS: Joi.number().default(1800),
 
     STRIPE_SECRET_KEY: Joi.string().required(),

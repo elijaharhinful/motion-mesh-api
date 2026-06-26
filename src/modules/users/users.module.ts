@@ -4,9 +4,10 @@ import { User } from './entities/user.entity';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { UserActions } from './actions/user.actions';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User])],
+  imports: [TypeOrmModule.forFeature([User]), StorageModule],
   controllers: [UsersController],
   providers: [UsersService, UserActions],
   // Export UserActions so Auth/Creators access user data via the actions layer

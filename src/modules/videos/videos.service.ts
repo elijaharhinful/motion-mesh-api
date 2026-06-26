@@ -6,6 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { ERROR_MESSAGES } from '../../common/constants/error-messages.constant';
 import { StorageService } from '../storage/storage.service';
+import { STORAGE_PREFIX } from '../storage/storage.constants';
 import { DanceVideo } from './entities/dance-video.entity';
 import { VideoStatus } from './enums/video-status.enum';
 import { DanceVideoActions } from './actions/dance-video.actions';
@@ -40,8 +41,8 @@ export class VideosService {
     contentType: string,
   ): Promise<{ url: string; key: string }> {
     const video = await this.findOwnedByCreator(videoId, creatorId);
-    const bucket = this.configService.get<string>('S3_BUCKET_VIDEOS') ?? '';
-    const key = `${fileType}/${video.id}/${Date.now()}`;
+    const bucket = this.configService.get<string>('S3_BUCKET') ?? '';
+    const key = `${STORAGE_PREFIX.videos}/${fileType}/${video.id}/${Date.now()}`;
     const url = await this.storageService.getPresignedUploadUrl(
       bucket,
       key,

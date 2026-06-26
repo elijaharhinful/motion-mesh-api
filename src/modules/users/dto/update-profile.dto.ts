@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
+import { IsOptional, IsString, MaxLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateProfileDto {
@@ -14,8 +14,13 @@ export class UpdateProfileDto {
   @MaxLength(100)
   lastName?: string;
 
-  @ApiPropertyOptional({ example: 'https://cdn.example.com/avatar.jpg' })
+  @ApiPropertyOptional({
+    description:
+      'Object-storage key of an uploaded avatar, obtained from POST /users/me/avatar/presigned-url.',
+    example: 'avatars/2b9f.../1782160200000',
+  })
   @IsOptional()
-  @IsUrl()
-  avatarUrl?: string;
+  @IsString()
+  @MaxLength(512)
+  avatarS3Key?: string;
 }

@@ -12,6 +12,9 @@ export const SUCCESS_MESSAGES = {
     'Password reset instructions have been sent to your email.',
   PASSWORD_RESET_SUCCESS:
     'Your password has been reset successfully. Please log in.',
+  // Storage
+  PRESIGNED_URL_CREATED: 'Upload link created.',
+  DOWNLOAD_URL_CREATED: 'Download link created.',
   // Users
   PROFILE_UPDATED: 'Your profile has been updated successfully.',
   ACTIVE_MODE_UPDATED: 'Workspace mode updated.',

@@ -1,6 +1,8 @@
 import { NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users.service';
 import { UserActions } from '../actions/user.actions';
+import { StorageService } from '../../storage/storage.service';
 import { User } from '../entities/user.entity';
 import { UserRole } from '../enums/user-role.enum';
 import { ActiveMode } from '../enums/active-mode.enum';
@@ -16,6 +18,7 @@ const buildUser = (overrides: Partial<User> = {}): User =>
     isEmailVerified: true,
     googleId: null,
     avatarUrl: null,
+    avatarS3Key: null,
     creatorProfile: null,
     isSeller: false,
     createdAt: new Date(),
@@ -26,6 +29,8 @@ const buildUser = (overrides: Partial<User> = {}): User =>
 describe('UsersService', () => {
   let service: UsersService;
   let userActions: jest.Mocked<UserActions>;
+  let storageService: jest.Mocked<StorageService>;
+  let configService: jest.Mocked<ConfigService>;
 
   beforeEach(() => {
     userActions = {
@@ -35,7 +40,17 @@ describe('UsersService', () => {
       remove: jest.fn(),
     } as unknown as jest.Mocked<UserActions>;
 
-    service = new UsersService(userActions);
+    storageService = {
+      getPresignedUploadUrl: jest.fn(),
+      getPresignedDownloadUrl: jest.fn(),
+      deleteObject: jest.fn(),
+    } as unknown as jest.Mocked<StorageService>;
+
+    configService = {
+      get: jest.fn(() => 'motion-mesh'),
+    } as unknown as jest.Mocked<ConfigService>;
+
+    service = new UsersService(userActions, storageService, configService);
   });
 
   describe('getMe', () => {
@@ -49,9 +64,59 @@ describe('UsersService', () => {
       );
     });
 
+    it('replaces avatarUrl with a signed URL when an uploaded avatar exists', async () => {
+      const user = buildUser({ avatarS3Key: 'avatars/user-1/123' });
+      userActions.findByIdWithCreatorProfile.mockResolvedValue(user);
+      storageService.getPresignedDownloadUrl.mockResolvedValue(
+        'https://signed-avatar',
+      );
+
+      const result = await service.getMe('user-1');
+
+      expect(storageService.getPresignedDownloadUrl).toHaveBeenCalledWith(
+        'motion-mesh',
+        'avatars/user-1/123',
+      );
+      expect(result.avatarUrl).toBe('https://signed-avatar');
+    });
+
+    it('leaves an external avatarUrl untouched when no uploaded avatar exists', async () => {
+      const user = buildUser({ avatarUrl: 'https://google/photo.jpg' });
+      userActions.findByIdWithCreatorProfile.mockResolvedValue(user);
+
+      const result = await service.getMe('user-1');
+
+      expect(storageService.getPresignedDownloadUrl).not.toHaveBeenCalled();
+      expect(result.avatarUrl).toBe('https://google/photo.jpg');
+    });
+
     it('throws NotFound when the user does not exist', async () => {
       userActions.findByIdWithCreatorProfile.mockResolvedValue(null);
       await expect(service.getMe('missing')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getAvatarUploadUrl', () => {
+    it('signs a PUT under the avatars/<userId>/ prefix', async () => {
+      userActions.findById.mockResolvedValue(buildUser());
+      storageService.getPresignedUploadUrl.mockResolvedValue('https://put');
+
+      const result = await service.getAvatarUploadUrl('user-1', 'image/png');
+
+      expect(result.url).toBe('https://put');
+      expect(result.key).toMatch(/^avatars\/user-1\/\d+$/);
+      expect(storageService.getPresignedUploadUrl).toHaveBeenCalledWith(
+        'motion-mesh',
+        result.key,
+        'image/png',
+      );
+    });
+
+    it('throws NotFound when the user does not exist', async () => {
+      userActions.findById.mockResolvedValue(null);
+      await expect(
+        service.getAvatarUploadUrl('missing', 'image/png'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -60,6 +125,7 @@ describe('UsersService', () => {
       const user = buildUser();
       userActions.findById.mockResolvedValue(user);
       userActions.save.mockImplementation((u) => Promise.resolve(u));
+      userActions.findByIdWithCreatorProfile.mockResolvedValue(user);
 
       const result = await service.updateProfile('user-1', {
         firstName: 'Janet',
@@ -67,6 +133,22 @@ describe('UsersService', () => {
 
       expect(result.firstName).toBe('Janet');
       expect(userActions.save).toHaveBeenCalledWith(user);
+    });
+
+    it('deletes the replaced avatar object when the key changes', async () => {
+      const user = buildUser({ avatarS3Key: 'avatars/user-1/old' });
+      userActions.findById.mockResolvedValue(user);
+      userActions.save.mockImplementation((u) => Promise.resolve(u));
+      userActions.findByIdWithCreatorProfile.mockResolvedValue(user);
+
+      await service.updateProfile('user-1', {
+        avatarS3Key: 'avatars/user-1/new',
+      });
+
+      expect(storageService.deleteObject).toHaveBeenCalledWith(
+        'motion-mesh',
+        'avatars/user-1/old',
+      );
     });
 
     it('throws NotFound when the user does not exist', async () => {

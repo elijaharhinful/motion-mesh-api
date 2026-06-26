@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DeepPartial, Repository } from 'typeorm';
 import { DanceVideo } from '../entities/dance-video.entity';
 import { VideoStatus } from '../enums/video-status.enum';
+import { VideoSort } from '../enums/video-sort.enum';
 import { ListVideosDto } from '../dto/list-videos.dto';
 
 /** Data-access layer for DanceVideo. All DB access for videos lives here. */
@@ -28,6 +29,14 @@ export class DanceVideoActions {
     return this.repo.findOne({ where: { id }, relations: { creator: true } });
   }
 
+  /** All of a creator's videos (any status), newest first — seller dashboard. */
+  findByCreator(creatorId: string): Promise<DanceVideo[]> {
+    return this.repo.find({
+      where: { creatorId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   /** Published-catalogue listing with optional filters (parameterised query builder). */
   listPublished(filters: ListVideosDto): Promise<DanceVideo[]> {
     const qb = this.repo
@@ -36,6 +45,11 @@ export class DanceVideoActions {
       .leftJoinAndSelect('creator.user', 'user')
       .where('video.status = :status', { status: VideoStatus.PUBLISHED });
 
+    if (filters.creatorId) {
+      qb.andWhere('video.creatorId = :creatorId', {
+        creatorId: filters.creatorId,
+      });
+    }
     if (filters.category) {
       qb.andWhere('video.category = :category', { category: filters.category });
     }
@@ -50,8 +64,27 @@ export class DanceVideoActions {
     if (filters.maxPriceCents !== undefined) {
       qb.andWhere('video.priceCents <= :max', { max: filters.maxPriceCents });
     }
+    if (filters.search) {
+      qb.andWhere(
+        '(video.title ILIKE :search OR video.description ILIKE :search)',
+        { search: `%${filters.search}%` },
+      );
+    }
 
-    return qb.orderBy('video.createdAt', 'DESC').getMany();
+    switch (filters.sort) {
+      case VideoSort.PRICE_ASC:
+        qb.orderBy('video.priceCents', 'ASC');
+        break;
+      case VideoSort.PRICE_DESC:
+        qb.orderBy('video.priceCents', 'DESC');
+        break;
+      case VideoSort.NEWEST:
+      default:
+        qb.orderBy('video.createdAt', 'DESC');
+        break;
+    }
+
+    return qb.getMany();
   }
 
   create(data: DeepPartial<DanceVideo>): DanceVideo {

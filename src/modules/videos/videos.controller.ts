@@ -27,7 +27,9 @@ import {
   ApiDeleteVideo,
   ApiGetVideo,
   ApiListVideos,
+  ApiListMyVideos,
   ApiPublishVideo,
+  ApiUnpublishVideo,
   ApiUpdateVideo,
   ApiGetVideoPresignedUrl,
 } from './swagger/videos.swagger';
@@ -59,6 +61,17 @@ export class VideosController {
   async list(@Query() filters: ListVideosDto) {
     const data = await this.videosService.list(filters);
     return { _message: fetchSuccess('videos'), data };
+  }
+
+  @Get('mine')
+  @UseGuards(JwtAuthGuard, SellerGuard)
+  @RequireSeller()
+  @ApiListMyVideos()
+  async listMine(@CurrentUser() user: User) {
+    const data = await this.videosService.listMine(
+      user.creatorProfile?.id ?? user.id,
+    );
+    return { _message: fetchSuccess('your videos'), data };
   }
 
   @Get(':id')
@@ -107,6 +120,21 @@ export class VideosController {
       user.creatorProfile?.id ?? user.id,
     );
     return { _message: SUCCESS_MESSAGES.VIDEO_PUBLISHED, data };
+  }
+
+  @Post(':id/unpublish')
+  @UseGuards(JwtAuthGuard, SellerGuard)
+  @RequireSeller()
+  @ApiUnpublishVideo()
+  async unpublish(
+    @CurrentUser() user: User,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    const data = await this.videosService.unpublishVideo(
+      id,
+      user.creatorProfile?.id ?? user.id,
+    );
+    return { _message: SUCCESS_MESSAGES.VIDEO_UNPUBLISHED, data };
   }
 
   @Post(':id/presigned-url')

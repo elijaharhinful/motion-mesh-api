@@ -34,6 +34,8 @@ export const ERROR_MESSAGES = {
   // ─── AI / Generation ────────────────────────────────────────────────────────
   GENERATION_JOB_NOT_FOUND: 'Generation job not found.',
   GENERATION_JOB_FORBIDDEN: 'You do not have access to this generation job.',
+  GENERATION_RESULT_NOT_READY:
+    'The generated video is not ready for download yet.',
   KLING_API_ERROR: 'AI video generation service encountered an error.',
   PURCHASE_REQUIRED: 'You must purchase this video before generating.',
 

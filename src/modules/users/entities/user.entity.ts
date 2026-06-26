@@ -31,8 +31,16 @@ export class User extends BaseEntity {
   @Column({ type: 'varchar', nullable: true, unique: true })
   googleId: string | null;
 
+  /**
+   * External avatar URL (e.g. from Google OAuth). When the user uploads their
+   * own avatar, `avatarS3Key` takes precedence and `getMe` returns a signed URL.
+   */
   @Column({ type: 'varchar', nullable: true })
   avatarUrl: string | null;
+
+  /** Object-storage key of a self-uploaded avatar (avatars/<userId>/<ts>). */
+  @Column({ type: 'varchar', nullable: true })
+  avatarS3Key: string | null;
 
   @OneToOne(() => CreatorProfile, (profile) => profile.user, {
     nullable: true,

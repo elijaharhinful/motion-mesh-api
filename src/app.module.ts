@@ -32,7 +32,10 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
         redis: {
           host: configService.get<string>('REDIS_HOST'),
           port: configService.get<number>('REDIS_PORT'),
-          password: configService.get<string>('REDIS_PASSWORD'),
+          password: configService.get<string>('REDIS_PASSWORD') || undefined,
+          // BullMQ requires this to be null for blocking commands.
+          maxRetriesPerRequest: null,
+          ...(configService.get<boolean>('REDIS_TLS') ? { tls: {} } : {}),
         },
       }),
     }),

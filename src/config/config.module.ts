@@ -21,6 +21,8 @@ export const configModuleOptions: ConfigModuleOptions = {
     REDIS_PORT: Joi.number().default(6379),
     // Allow empty for passwordless local/WSL Redis. When empty, ioredis skips AUTH.
     REDIS_PASSWORD: Joi.string().allow('').optional(),
+    // Managed Redis (e.g. Upstash) requires TLS. Local/WSL Redis does not.
+    REDIS_TLS: Joi.boolean().default(false),
 
     JWT_SECRET: Joi.string().required(),
     JWT_ACCESS_EXPIRES_IN: Joi.string().default('15m'),

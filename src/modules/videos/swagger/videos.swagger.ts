@@ -26,6 +26,19 @@ export const ApiListVideos = () =>
     ApiResponse({ status: HttpStatus.OK, description: 'List of videos.' }),
   );
 
+export const ApiListMyVideos = () =>
+  applyDecorators(
+    ApiBearerAuth(),
+    ApiOperation({
+      summary: "List the signed-in seller's own listings (any status)",
+    }),
+    ApiResponse({ status: HttpStatus.OK, description: 'List of your videos.' }),
+    ApiResponse({
+      status: HttpStatus.FORBIDDEN,
+      description: 'Seller capability required.',
+    }),
+  );
+
 export const ApiGetVideo = () =>
   applyDecorators(
     ApiOperation({ summary: 'Get a single dance video by ID' }),
@@ -70,6 +83,17 @@ export const ApiPublishVideo = () =>
     ApiBearerAuth(),
     ApiOperation({ summary: 'Publish a video (make it publicly listed)' }),
     ApiResponse({ status: HttpStatus.OK, description: 'Video published.' }),
+    ApiResponse({
+      status: HttpStatus.FORBIDDEN,
+      description: 'Not the owner.',
+    }),
+  );
+
+export const ApiUnpublishVideo = () =>
+  applyDecorators(
+    ApiBearerAuth(),
+    ApiOperation({ summary: 'Unpublish a video (revert to draft, hide it)' }),
+    ApiResponse({ status: HttpStatus.OK, description: 'Video unpublished.' }),
     ApiResponse({
       status: HttpStatus.FORBIDDEN,
       description: 'Not the owner.',

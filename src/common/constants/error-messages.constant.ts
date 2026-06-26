@@ -25,6 +25,8 @@ export const ERROR_MESSAGES = {
   VIDEO_NOT_FOUND: 'Dance video not found.',
   VIDEO_FORBIDDEN: 'You do not have permission to modify this video.',
   VIDEO_NOT_PUBLISHED: 'This video is not available for purchase.',
+  VIDEO_NO_ORIGINAL:
+    'Upload the original video file before publishing this listing.',
 
   // ─── Payments ───────────────────────────────────────────────────────────────
   PAYMENT_INTENT_FAILED: 'Failed to create payment intent.',
